@@ -302,6 +302,183 @@ int hessLS_2d(pMesh mesh,pSol sol,int ip,int is,double *grd,double *hes) {
   return(1);
 }
 
+/* least square approximation of hessian */
+int hessLS_s(pMesh mesh,pSol sol,int ip,int is,double *grd,double *hes) {
+  pPoint    p0,p1;
+  pTria     pt;
+  double    a[6],b[6],m[6][6],ax,ay,az,wgt;
+  double    det;
+  double    du,u,u1;
+  int      *adja,adj,i,j,l,iadr,nsdep,ip1;
+  unsigned char voy,i1;
+
+  p0    = &mesh->point[ip];
+  nsdep = p0->s;
+  if ( p0->nv < 3 ) {
+    /* Undetermined boundaries */
+    return(-1);
+  }
+
+  if ( !nsdep ) {
+    p0->h = 1;
+    // Algiane: Try to ignore those point do not work for now
+    return -1;
+  }
+
+  pt   = &mesh->tria[nsdep];
+  iadr = 3*(nsdep-1)+1;
+  adja = &mesh->adja[iadr];
+
+  memset(b,0,6*sizeof(double));
+  memset(m,0,36*sizeof(double));
+  u = getSol(sol,ip,is);
+
+  i = 0;
+  if ( pt->v[1] == ip )      i = 1;
+  else if ( pt->v[2] == ip ) i = 2;
+
+  /* Hessian: Ui = U + <gradU,PPi> + 0.5*(tPPi.Hess.PPi) */
+  adj = nsdep;
+  voy = i;
+  do {
+    pt    = &mesh->tria[adj];
+    i1    = idir[voy+1];
+    ip1   = pt->v[i1];
+    p1    = &mesh->point[ip1];
+    if ( p1->s ) {
+      u1    = getSol(sol,ip1,is);
+      /*if ( mesh->info.ddebug)
+        printf("  tr: %d : %d %d %d   sol %f / %d\n",adj,pt->v[0],pt->v[1],pt->v[2],u1,ip1);*/
+
+      ax    = p1->c[0] - p0->c[0];
+      ay    = p1->c[1] - p0->c[1];
+      az    = p1->c[2] - p0->c[2];
+
+      a[0] = 0.5 * ax*ax;
+      a[1] =       ax*ay;
+      a[2] =       ax*az;
+      a[3] = 0.5 * ay*ay;
+      a[4] =       ay*az;
+      a[5] = 0.5 * az*az;
+      du   = (u1-u) - (ax*grd[0] + ay*grd[1] + az*grd[2]);
+
+      /* M = At*A symmetric positive definite */
+      for (j=0; j<6; j++) {
+        m[j][j] += a[j]*a[j];
+        for (l=j+1; l<6; l++) {
+          m[j][l] += a[j]*a[l];
+          m[l][j] += a[l]*a[j];
+        }
+      }
+
+      /* c = At*b */
+      for (j=0; j<6; j++)
+        b[j] += a[j]*du;
+    }
+    iadr = 3*(adj-1)+1;
+    adja = &mesh->adja[iadr];
+    adj  = adja[i1] / 3;
+    voy  = adja[i1] % 3;
+    voy  = idir[voy+1];
+  }
+  while ( adj && adj != nsdep );
+
+  /* check open ball */
+  if ( !adj ) {
+    if ( pt->v[0] == ip )      i = 0;
+    else if ( pt->v[1] == ip ) i = 1;
+    else                       i = 2;
+    voy   = idir[i+2];
+    ip1   = pt->v[voy];
+    p1    = &mesh->point[ip1];
+    if ( p1->s ) {
+      u1    = getSol(sol,ip1,is);
+
+      ax    = p1->c[0] - p0->c[0];
+      ay    = p1->c[1] - p0->c[1];
+      az    = p1->c[2] - p0->c[2];
+
+      a[0] = 0.5 * ax*ax;
+      a[1] =       ax*ay;
+      a[2] =       ax*az;
+      a[3] = 0.5 * ay*ay;
+      a[4] =       ay*az;
+      a[5] = 0.5 * az*az;
+      du   = (u1-u) - (ax*grd[0] + ay*grd[1] + az*grd[2]);
+
+      /* M = At*A symmetric positive definite */
+      for (j=0; j<6; j++) {
+        m[j][j] += a[j]*a[j];
+        for (l=j+1; l<6; l++) {
+          m[j][l] += a[j]*a[l];
+          m[l][j] += a[l]*a[j];
+        }
+      }
+
+      /* c = At*b */
+      for (j=0; j<6; j++)
+        b[j] += a[j]*du;
+    }
+  }
+
+  /* solve m(6,6)*x(6) = b(6) */
+  int ier = gauss(6,m,hes,b,mesh->info.ddebug);
+
+  if ( !ier ) {
+    /* Points of the ball lie probably along the same plane */
+    assert( fabs(grd[2]) < EPS1 );
+
+    double ma[6];
+    ma[0] = m[0][0];
+    ma[1] = m[0][1];
+    ma[2] = m[1][1];
+    ma[3] = m[0][3];
+    ma[4] = m[1][3];
+    ma[5] = m[3][3];
+
+
+    if ( fabs(ma[0]) < EPS1 ) {
+      fprintf(stdout,"Surface 2d Ill cond'ed matrix (%d, %E).\n",ip,ma[0]);
+      return(-1);
+    }
+        /* direct solving */
+    double aa = ma[2]*ma[5] - ma[4]*ma[4];
+    double bb = ma[4]*ma[3] - ma[1]*ma[5];
+    double cc = ma[1]*ma[4] - ma[2]*ma[3];
+    double dd = ma[0]*aa + ma[1]*bb + ma[3]*cc;
+
+    /* singular matrix */
+    if ( fabs(dd) < EPS1 ) {
+      /* Constant solution: put hmax */
+      hes[0] = hes[3] = hes[5] = 0;
+      hes[1] = hes[4] = hes[2] = 0;
+      p0->h = 1;
+    }
+    else {
+      det = 1.0 / dd;
+      double dd = ma[0]*ma[5] - ma[3]*ma[3];
+      double ee = ma[1]*ma[3] - ma[0]*ma[4];
+      double ff = ma[0]*ma[2] - ma[1]*ma[1];
+      hes[0] = (b[0]*aa + b[1]*bb + b[3]*cc) * det;
+      hes[1] = (b[0]*bb + b[1]*dd + b[3]*ee) * det;
+      hes[3] = (b[0]*cc + b[1]*ee + b[3]*ff) * det;
+      hes[2] = hes[4] = 0;
+      /* Put 0 along z-dir to impose hmax at the end */
+      hes[5] = 0;
+    }
+  }
+
+  if ( !ier && mesh->info.ddebug ) {
+    fprintf(stdout," Ill cond'ed matrix (%d, %d).\n",ip,ier);
+    return(-1);
+  }
+
+  if ( !p0->b && p0->nv == 4 )  return(-1);
+  p0->h = 1;
+
+  return(1);
+}
+
 
 /* average values of neighbors */
 int avgval_3d(pMesh mesh,pDeriv der,int ip,double *hes) {
@@ -419,6 +596,78 @@ int avgval_2d(pMesh mesh,pDeriv der,int ip,double *hes) {
   return(0);
 }
 
+int avgval_s(pMesh mesh,pDeriv der,int ip,double *hes) {
+  pPoint    p0,p1;
+  pTria     pt;
+  double    dd;
+  int      *adja,adj,i,j,iadr,nsdep,ip1,nb;
+  unsigned char voy,i1;
+
+  p0    = &mesh->point[ip];
+  nsdep = p0->s;
+  if ( !nsdep ) {
+    p0->h = 1;
+    // Algiane: Try to ignore those point do not work for now
+    return -1;
+  }
+
+  pt   = &mesh->tria[nsdep];
+  iadr = 3*(nsdep-1)+1;
+  adja = &mesh->adja[iadr];
+
+  if ( pt->v[0] == ip )      i = 0;
+  else if ( pt->v[1] == ip ) i = 1;
+  else                       i = 2;
+
+  adj = nsdep;
+  voy = i;
+  memset(hes,0,6*sizeof(double));
+  nb  = 0;
+  do {
+    pt    = &mesh->tria[adj];
+    i1    = idir[voy+1];
+    ip1   = pt->v[i1];
+    p1    = &mesh->point[ip1];
+    if ( p1->s && p1->h > 0 ) {
+      for (j=0; j<6; j++)
+        hes[j] += der[ip1].hes[j];
+      nb++;
+    }
+
+    iadr = 3*(adj-1)+1;
+    adja = &mesh->adja[iadr];
+    adj  = adja[i1] / 3;
+    voy  = adja[i1] % 3;
+    voy  = idir[voy+1];
+  }
+  while ( adj && adj != nsdep );
+
+  /* check open ball */
+  if ( !adj ) {
+    if ( pt->v[0] == ip )       i = 0;
+    else if ( pt->v[1] == ip )  i = 1;
+    else                        i = 2;
+    voy   = idir[i+2];
+    ip1   = pt->v[voy];
+    p1    = &mesh->point[ip1];
+    if ( p1->s && p1->h > 0 ) {
+      for (j=0; j<6; j++)
+        hes[j] += der[ip1].hes[j];
+      nb++;
+    }
+  }
+
+  if ( nb > 0 ) {
+    dd = 1.0 / (double)nb;
+    for (j=0; j<6; j++)
+      hes[j] = hes[j] * dd;
+    p0->h = 1;
+    return(1);
+  }
+
+  return(0);
+}
+
 
 /* assign value of closest vertex */
 int clsval_3d(pMesh mesh,pDeriv der,int ip,double *hes) {
@@ -458,7 +707,7 @@ int clsval_2d(pMesh mesh,pDeriv der,int ip,double *hes) {
   nsdep = p0->s;
   if ( !nsdep ) {
     fprintf(stdout," No simplex stored. Exit\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
   pt = &mesh->tria[nsdep];
   i  = 1;
@@ -471,6 +720,36 @@ int clsval_2d(pMesh mesh,pDeriv der,int ip,double *hes) {
   hes[0] = der[ip1].hes[0];
   hes[1] = der[ip1].hes[1];
   hes[2] = der[ip1].hes[2];
+
+  p0->h = 1;
+  return(1);
+}
+
+int clsval_s(pMesh mesh,pDeriv der,int ip,double *hes) {
+  pPoint    p0,p1;
+  pTria     pt;
+  int       nsdep,ip1;
+  unsigned char i,j;
+
+  p0    = &mesh->point[ip];
+  nsdep = p0->s;
+  if ( !nsdep ) {
+    fprintf(stdout," Warning: No simplex stored at point %d.\n",ip);
+    for (j=0; j<6; j++)
+      hes[j] = 0;
+    // Algiane: Try to ignore those point do not work for now
+    return -1;
+  }
+  pt = &mesh->tria[nsdep];
+  i  = 1;
+  if ( pt->v[1] == ip )      i = 2;
+  else if ( pt->v[2] == ip ) i = 0;
+
+  ip1 = pt->v[i];
+  p1  = &mesh->point[ip1];
+  if ( !p1->h )  return(0);
+  for (j=0; j<6; j++)
+    hes[j] = der[ip1].hes[j];
 
   p0->h = 1;
   return(1);

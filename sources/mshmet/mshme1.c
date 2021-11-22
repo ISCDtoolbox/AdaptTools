@@ -47,8 +47,7 @@ int mshme1(pMesh mesh,pSol sol) {
       if ( !ret )  return(0);
       else if ( ret < 0 )  nex++;
     }
-
-	  /* correction */
+    /* correction */
     if ( nex ) {
       ney = nex;
       do {

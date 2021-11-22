@@ -5,7 +5,13 @@
 
 
 int laplac_3d(pMesh mesh,pDeriv der) {
-	return(1);
+  printf(" Warning: laplace not implemented in 3D.\n");
+  return(1);
+}
+
+int laplac_s(pMesh mesh,pDeriv der) {
+  printf(" Warning: laplace not implemented for 3D surface meshes.\n");
+  return(1);
 }
 
 

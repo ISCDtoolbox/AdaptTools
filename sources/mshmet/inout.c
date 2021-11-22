@@ -92,12 +92,12 @@ int loadMesh(pMesh mesh,char *filename) {
 
   /* read mesh triangles */
   GmfGotoKwd(inm,GmfTriangles);
-  if ( mesh->dim == 2 ) {
+  if ( !mesh->ne ) {
     for (k=1; k<=mesh->nt; k++) {
       pt1 = &mesh->tria[k];
       GmfGetLin(inm,GmfTriangles,&pt1->v[0],&pt1->v[1],&pt1->v[2],&ref);
       for (i=0; i<3; i++) {    
-              ppt = &mesh->point[pt1->v[i]];
+        ppt = &mesh->point[pt1->v[i]];
         if ( !ppt->s )  ppt->s = k;
       }
       p0 = &mesh->point[pt1->v[0]];
@@ -201,8 +201,9 @@ int loadSol(pSol sol,Info *info,char *filename) {
     else {
       GmfGetLin(inm,GmfSolAtVertices,dbuf);
       ia = (k-1)*sol->size + 1;
-      for (i=0; i<sol->size; i++)
+      for (i=0; i<sol->size; i++) {
         sol->sol[ia+i] = dbuf[i];
+      }
     }
   }
 
@@ -248,8 +249,9 @@ int loadMetric(pSol sol,Info *info,char *filename) {
     else {
       GmfGetLin(inm,GmfSolAtVertices,dbuf);
       ia = (k-1)*size + 1;
-      for (i=0; i<size; i++)
+      for (i=0; i<size; i++) {
         sol->met[ia+i] = dbuf[i];
+      }
     }
   }
 
@@ -384,7 +386,7 @@ int outder(pMesh mesh,pDeriv der,int j) {
   GmfSetKwd(outm,GmfSolAtVertices,mesh->np,type,typtab);
   if ( mesh->dim == 2) {
     for (k=1; k<=mesh->np; k++) {
-                  dd = 1.0 / sqrt(der[k].grd[0]*der[k].grd[0] + der[k].grd[1]*der[k].grd[1]);
+      dd = 1.0;// / sqrt(der[k].grd[0]*der[k].grd[0] + der[k].grd[1]*der[k].grd[1]);
       fbuf[0] = dd * der[k].grd[0];
       fbuf[1] = dd * der[k].grd[1];
       GmfSetLin(outm,GmfSolAtVertices,fbuf);
@@ -392,7 +394,7 @@ int outder(pMesh mesh,pDeriv der,int j) {
   }
         else {
     for (k=1; k<=mesh->np; k++) {
-                  dd = 1.0 / sqrt(der[k].grd[0]*der[k].grd[0] + der[k].grd[1]*der[k].grd[1] \
+                  dd = 1.0;// / sqrt(der[k].grd[0]*der[k].grd[0] + der[k].grd[1]*der[k].grd[1] \
                                 + der[k].grd[2]*der[k].grd[2]);
       fbuf[0] = dd * der[k].grd[0];
       fbuf[1] = dd * der[k].grd[1];

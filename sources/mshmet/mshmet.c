@@ -327,24 +327,41 @@ static void endcod() {
 
 
 /* set function pointers */
-void setfunc(int dim) {
-  if ( dim == 2 ) {
-		boulep = boulep_2d;
-    hashel = hashel_2d;
-    gradLS = gradLS_2d;
-    hessLS = hessLS_2d;
-    getSol = getSol_2d;
-    avgval = avgval_2d;
-    clsval = clsval_2d;
-    nrmhes = nrmhes_2d;
-    laplac = laplac_2d;
-    defmet = defmet_2d;
-    redsim = redsim_2d;
-    metrLS = metrLS_2d;
-		lissag = lissag_2d;
+void setfunc(pMesh mesh) {
+  if ( !mesh->ne ) {
+    if ( mesh->dim == 2 ) {
+      boulep = boulep_2d;
+      hashel = hashel_2d;
+      gradLS = gradLS_2d;
+      hessLS = hessLS_2d;
+      getSol = getSol_2d;
+      avgval = avgval_2d;
+      clsval = clsval_2d;
+      nrmhes = nrmhes_2d;
+      laplac = laplac_2d;
+      defmet = defmet_2d;
+      redsim = redsim_2d;
+      metrLS = metrLS_2d;
+      lissag = lissag_2d;
+    }
+    else {
+      boulep = boulep_2d;
+      hashel = hashel_2d;
+      gradLS = gradLS_s;
+      hessLS = hessLS_s;
+      getSol = getSol_3d;
+      avgval = avgval_s;
+      clsval = clsval_s;
+      nrmhes = nrmhes_3d;
+      laplac = laplac_s;
+      defmet = defmet_3d;
+      redsim = redsim_3d;
+      metrLS = metrLS_3d;
+      lissag = lissag_2d;
+    }
   }
   else {
-		boulep = boulep_3d;
+    boulep = boulep_3d;
     hashel = hashel_3d;
     gradLS = gradLS_3d;
     hessLS = hessLS_3d;
@@ -356,7 +373,7 @@ void setfunc(int dim) {
     defmet = defmet_3d;
     redsim = redsim_3d;
     metrLS = metrLS_3d;
-		lissag = lissag_3d;
+    lissag = lissag_3d;
   }
 }
 
@@ -401,7 +418,7 @@ int main(int argc,char **argv) {
   if ( mesh->info.metric && mesh->mname )
     if ( !loadMetric(sol,&mesh->info,mesh->mname) )  exit(1);
   if ( !parsop(mesh,sol) )  exit(1);
-  setfunc(mesh->dim);
+  setfunc(mesh);
   chrono(OFF,&ctim[1]);
   if ( mesh->info.imprim )  stats(mesh,sol);
   fprintf(stdout,"  -- DATA READING COMPLETED.     %.2f sec.\n",gttime(ctim[1]));
