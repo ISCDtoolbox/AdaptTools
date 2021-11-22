@@ -431,6 +431,7 @@ int outder(pMesh mesh,pDeriv der,int j) {
     }   
     GmfCloseMesh(outm);
   }
+  return 1;
 }
 
 

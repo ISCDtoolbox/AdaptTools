@@ -30,7 +30,7 @@ static void usage(char *prog) {
   fprintf(stdout,"-d      Turn on debug mode\n");
   fprintf(stdout,"-h      Print this message\n");
 	fprintf(stdout,"-r      Scaling factor on ROI\n"); 
-  fprintf(stdout,"-v [n]  Tune level of verbosity\n");
+  fprintf(stdout,"-v[n]  Tune level of verbosity\n");
   fprintf(stdout,"-e      Return element number in mesh1 containing vertex in mesh2\n");
 
   exit(1);
@@ -199,6 +199,7 @@ int setfunc(int dim) {
 		hashelt   = hashelt_3d;
 		boulep    = boulep_3d;
   }
+  return 1;
 }
 
 

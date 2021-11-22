@@ -73,7 +73,7 @@ static int gauss(int n,double m[n][n],double *x,double *b,char dbg) {
       for (j=0; j<n; j++)
         dd += m[i][j] * x[j];
       if ( fabs(dd-b[i]) > EPS ) {
-        fprintf(stdout,"  Ax[%] = %f   b[%] = %f\n",i,dd,i,b[i]);
+        fprintf(stdout,"  Ax[%d] = %f   b[%d] = %f\n",i,dd,i,b[i]);
         exit(1);
       }
     }
@@ -267,7 +267,7 @@ int hessLS_2d(pMesh mesh,pSol sol,int ip,int is,double *grd,double *hes) {
   }
 
   if ( fabs(ma[0]) == 0.0 ) {
-    if ( mesh->info.ddebug )  fprintf(stdout," Ill cond'ed matrix (d, %E).\n",ip,ma[0]);
+    if ( mesh->info.ddebug )  fprintf(stdout," Ill cond'ed matrix (%d, %E).\n",ip,ma[0]);
     exit(1);
   }
 
