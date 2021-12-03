@@ -29,6 +29,10 @@ Please refer to the instructions provided on the ICS Commons Library page in ord
    make install
    ```
 
+#### Remark on mshmet software
+* The `master` branch provides a library mode but, for now, 3D meshes aren't handled;
+* the `olderVersionThatWorks` branch provides metric computation for both 2D, 3D volume and 3D surface meshes but doesn't provides the library mode.  
+
 #### Authors & contributors
 * these tools have been developed and contributed over the years by several contributors. Main developers are Charles Dapogny (Université J. Fourier), Cécile Dobrzynski (Université de Bordeaux, INRIA) and Pascal Frey (Université Pierre et Marie Curie).
 * Contributors to this project are warmly welcomed. 
