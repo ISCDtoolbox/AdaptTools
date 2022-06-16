@@ -136,8 +136,7 @@ int hessLS_3d(pMesh mesh,pSol sol,int ip,int is,double *grd,double *hes) {
 
     /* M = At*A symmetric positive definite */
     for (j=0; j<6; j++) {
-      m[j][j] += a[j]*a[j];
-      for (l=j+1; l<6; l++) {
+      for (l=j; l<6; l++) {
         m[j][l] += a[j]*a[l];
         m[l][j] += a[l]*a[j];
       }
