@@ -39,8 +39,8 @@ static int gauss(int n,double m[n][n],double *x,double *b,char dbg) {
       b[j]  = b[ip];
       b[ip] = dd;
     }
-    if ( fabs(m[j][j]) < EPS ) {
-      if ( dbg )  fprintf(stdout,"  %%%% Null pivot.\n");
+    if ( fabs(m[j][j]) < EPS1 ) {
+      if ( dbg )  fprintf(stdout,"  %%%% Null pivot: %e.\n",m[j][i]);
       return(0);
     }
 
@@ -54,7 +54,7 @@ static int gauss(int n,double m[n][n],double *x,double *b,char dbg) {
     }
   }
 
-  if ( fabs(m[n-1][n-1]) < EPS ) {
+  if ( fabs(m[n-1][n-1]) < EPS1 ) {
     if ( dbg )  fprintf(stdout,"  %%%% Null pivot.\n");
     return(0);
   }
