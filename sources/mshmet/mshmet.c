@@ -69,7 +69,7 @@ static int parsar(int argc,char *argv[],pMesh mesh,pSol sol) {
   info->hmin   = 0.01;
   info->hmax   = 1.0;
   info->eps    = 0.01;
-  info->nnu    = 0;
+  info->nnu    = 1;
   info->iso    = 0;
   info->bin    = 1;
   info->metric = 0;
